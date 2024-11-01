@@ -1,0 +1,93 @@
+---
+title: "DDSCASESTUDY1"
+author: "Vanessa Nkongolo"
+date: "2024-11-01"
+output: html_document
+---
+```{r}
+# Load libraries
+library(ggplot2)
+library(dplyr)
+library(e1071)  # For Naive Bayes
+library(caret)
+library(class)
+
+# Read the dataset
+DF <- read.csv(choose.files())
+
+# Select and process columns
+CaseStudydata <- DF %>%
+  select(Gender, MonthlyIncome, Distance = DistanceFromHome, NumCompWorked, 
+         WorkLifeBalance, Rate = HourlyRate, Age, Department, JobSatisfaction, 
+         EnvironmentSatisfaction, Overtime, Attrition) %>%
+  mutate(
+    JobSatisfactionOver3 = factor(ifelse(JobSatisfaction > 3, "Yes", "No")),
+    WorkLifeBalanceOver3 = factor(ifelse(WorkLifeBalance > 3, "Yes", "No")),
+    IsSalesDept = factor(ifelse(Department == "Sales", "Yes", "No")),
+    DistanceFromHomeOver20 = factor(ifelse(Distance > 20, "Yes", "No")),
+    Department = as.factor(Department),
+    Overtime = as.factor(Overtime),
+    Attrition = as.factor(Attrition)
+  )
+# Job Satisfaction by Attrition
+ggplot(CaseStudydata, aes(x = Attrition, y = JobSatisfaction, fill = Attrition)) +
+  geom_boxplot() +
+  labs(title = "Job Satisfaction by Attrition", x = "Attrition Status", y = "Job Satisfaction Level") +
+  scale_fill_manual(values = c("No" = "blue", "Yes" = "red")) +
+  theme_minimal()
+
+# Work-Life Balance by Attrition
+ggplot(CaseStudydata, aes(x = factor(WorkLifeBalance), fill = Attrition)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "Attrition by Work-Life Balance", x = "Work-Life Balance Rating", y = "Percentage of Employees") +
+  scale_fill_manual(values = c("No" = "blue", "Yes" = "red")) +
+  theme_minimal()
+
+# Distance from Home by Attrition
+ggplot(CaseStudydata, aes(x = Attrition, y = Distance, fill = Attrition)) +
+  geom_boxplot() +
+  labs(title = "Attrition by Distance from Home", x = "Attrition Status", y = "Distance from Home (miles)") +
+  scale_fill_manual(values = c("No" = "blue", "Yes" = "red")) +
+  theme_minimal()
+# Set a random seed for reproducibility
+set.seed(42)
+
+# Split data into training and testing sets
+trainIndex <- createDataPartition(CaseStudydata$Attrition, p = 0.8, list = FALSE)
+trainData <- CaseStudydata[trainIndex, ]
+testData <- CaseStudydata[-trainIndex, ]
+# Upsample the training data for balanced classes
+trainData <- upSample(x = trainData[ , -which(names(trainData) == "Attrition")], y = trainData$Attrition)
+colnames(trainData)[ncol(trainData)] <- "Attrition"
+
+# Train Naive Bayes model
+nb_model <- naiveBayes(Attrition ~ ., data = trainData)
+print(nb_model)
+# Upsample the training data for balanced classes
+trainData <- upSample(x = trainData[ , -which(names(trainData) == "Attrition")], y = trainData$Attrition)
+colnames(trainData)[ncol(trainData)] <- "Attrition"
+
+# Train Naive Bayes model
+nb_model <- naiveBayes(Attrition ~ ., data = trainData)
+print(nb_model)
+# Get predicted probabilities
+prob_predictions <- predict(nb_model, testData, type = "raw")
+
+# Adjust the threshold to optimize sensitivity and specificity
+threshold <- 0.6
+adjusted_predictions <- ifelse(prob_predictions[, "Yes"] > threshold, "Yes", "No")
+adjusted_predictions <- as.factor(adjusted_predictions)
+
+# Generate confusion matrix for adjusted predictions
+confusion_matrix <- confusionMatrix(adjusted_predictions, testData$Attrition, positive = "Yes")
+print(confusion_matrix)
+
+# Extract accuracy, sensitivity, and specificity
+accuracy <- confusion_matrix$overall['Accuracy']
+sensitivity <- confusion_matrix$byClass['Sensitivity']
+specificity <- confusion_matrix$byClass['Specificity']
+
+cat("Accuracy:", accuracy, "\n")
+cat("Sensitivity:", sensitivity, "\n")
+cat("Specificity:", specificity, "\n")
