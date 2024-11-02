@@ -91,3 +91,66 @@ specificity <- confusion_matrix$byClass['Specificity']
 cat("Accuracy:", accuracy, "\n")
 cat("Sensitivity:", sensitivity, "\n")
 cat("Specificity:", specificity, "\n")
+
+
+# Case Study Prediction Code
+
+```{r}
+# Load necessary libraries
+library(tidyverse)
+library(dplyr)
+library(e1071)  
+library(caret)
+
+# Load your original labeled data 
+comp_set <- read.csv(choose.files())
+
+# Verify that Department column exists before creating IsSalesDept
+if("Department" %in% colnames(comp_set)) {
+  comp_set <- comp_set %>%
+    mutate(
+      IsSalesDept = factor(ifelse(Department == "Sales", "Yes", "No")),
+      WorkLifeBalanceOver3 = factor(ifelse(WorkLifeBalance > 3, "Yes", "No")),
+      DistanceFromHomeOver20 = factor(ifelse(DistanceFromHome > 20, "Yes", "No")),
+      Gender = as.factor(Gender),
+      OverTime = as.factor(OverTime)
+    )
+} else {
+
+  comp_set <- comp_set %>%
+    mutate(
+      WorkLifeBalanceOver3 = factor(ifelse(WorkLifeBalance > 3, "Yes", "No")),
+      DistanceFromHomeOver20 = factor(ifelse(DistanceFromHome > 20, "Yes", "No")),
+      Gender = as.factor(Gender),
+      OverTime = as.factor(OverTime)
+    )
+}
+
+# Select relevant columns and rename as needed
+comp_set <- comp_set %>%
+  select(ID, Gender, MonthlyIncome, DistanceFromHome, NumCompaniesWorked, 
+         WorkLifeBalanceOver3, Rate = HourlyRate, Age, Department, 
+         EnvironmentSatisfaction, OverTime, IsSalesDept, DistanceFromHomeOver20)
+
+# Ensure factor levels match the training dataset
+comp_set$Gender <- factor(comp_set$Gender, levels = levels(trainData$Gender))
+comp_set$OverTime <- factor(comp_set$OverTime, levels = levels(trainData$OverTime))
+comp_set$WorkLifeBalanceOver3 <- factor(comp_set$WorkLifeBalanceOver3, levels = levels(trainData$WorkLifeBalanceOver3))
+if("IsSalesDept" %in% colnames(comp_set)) {
+  comp_set$IsSalesDept <- factor(comp_set$IsSalesDept, levels = levels(trainData$IsSalesDept))
+}
+comp_set$DistanceFromHomeOver20 <- factor(comp_set$DistanceFromHomeOver20, levels = levels(trainData$DistanceFromHomeOver20))
+
+# Use the Naive Bayes model to predict attrition
+comp_set$Attrition <- predict(nb_model, comp_set)
+comp_set$Attrition
+
+# Filter Comp_Set
+Filtered_comp_set <- comp_set %>% select(ID, Attrition)
+Filtered_comp_set
+
+# Define the file path within the CaseStudy1DDS directory
+output_path <- "CaseStudy1CompSet_Predictions.csv"
+
+# Save Filtered_comp_set as a CSV file
+write.csv(Filtered_comp_set, file = output_path, row.names = FALSE)
