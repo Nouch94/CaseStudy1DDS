@@ -52,7 +52,9 @@ ggplot(CaseStudydata, aes(x = Attrition, y = Distance, fill = Attrition)) +
   theme_minimal()
 # Set a random seed for reproducibility
 set.seed(42)
-
+```
+###Train MODEL
+```{r}
 # Split data into training and testing sets
 trainIndex <- createDataPartition(CaseStudydata$Attrition, p = 0.8, list = FALSE)
 trainData <- CaseStudydata[trainIndex, ]
@@ -92,7 +94,7 @@ cat("Accuracy:", accuracy, "\n")
 cat("Sensitivity:", sensitivity, "\n")
 cat("Specificity:", specificity, "\n")
 
-
+```
 # Case Study Prediction Code
 
 ```{r}
@@ -154,3 +156,4 @@ output_path <- "CaseStudy1CompSet_Predictions.csv"
 
 # Save Filtered_comp_set as a CSV file
 write.csv(Filtered_comp_set, file = output_path, row.names = FALSE)
+```
